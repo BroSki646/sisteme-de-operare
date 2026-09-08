@@ -2,105 +2,158 @@ import datetime
 import tkinter as tk
 from tkinter import messagebox
 
+
 class CountdownTimer:
-    def __init__(self, root):
-        self.root = root
-        self.root.title("Timer Numărătoare Inversă")
-        self.root.geometry("380x280")
-        self.root.resizable(False, False)
 
-        self.running = False
-        self.target_datetime = None
+  def __init__(self, root):
+    self.root = root
+    self.root.title("Sistem Multi-Timer")
+    self.root.geometry("450x400")
+    self.root.resizable(False, False)
 
-        # --- Etichete și câmpuri de introducere ---
-        # Data (format YYYY-MM-DD)
-        tk.Label(root, text="Data țintă (YYYY-MM-DD):", font=("Helvetica", 10)).pack(pady=(15, 2))
-        self.entry_date = tk.Entry(root, font=("Helvetica", 11), justify="center")
-        self.entry_date.pack()
-        # Setăm automat data de azi ca exemplu
-        today_str = datetime.date.today().strftime("%Y-%m-%d")
-        self.entry_date.insert(0, today_str)
+    # Stări pentru timere
+    self.timer2_running = False
+    self.timer2_job = None
+    self.timer3_job = None
 
-        # Ora (format HH:MM:SS sau HH:MM)
-        tk.Label(root, text="Ora țintă (HH:MM:SS):", font=("Helvetica", 10)).pack(pady=(10, 2))
-        self.entry_time = tk.Entry(root, font=("Helvetica", 11), justify="center")
-        self.entry_time.pack()
-        self.entry_time.insert(0, "18:00:00")
+    self.build_ui()
 
-        # Afișaj Timer
-        self.label_timer = tk.Label(root, text="00:00:00", font=("Helvetica", 28, "bold"), fg="#1E88E5")
-        self.label_timer.pack(pady=15)
+  def build_ui(self):
+    # TIMER 1: Eveniment programat la o oră fixă (HH:MM:SS)
+    frame_t1 = tk.LabelFrame(
+        self.root,
+        text="Timer 1: Eveniment Programat (HH:MM:SS)",
+        padx=10,
+        pady=5,
+    )
+    frame_t1.pack(fill="x", padx=15, pady=5)
 
-        # Buton Start
-        self.btn_start = tk.Button(
-            root,
-            text="START",
-            font=("Helvetica", 11, "bold"),
-            bg="#4CAF50",
-            fg="white",
-            padx=15,
-            pady=3,
-            command=self.start_timer
-        )
-        self.btn_start.pack()
+    tk.Label(frame_t1, text="Ora țintă (ex: 14:30:00):").pack()
+    self.entry_time1 = tk.Entry(frame_t1)
+    self.entry_time1.pack()
 
-    def start_timer(self):
-        if self.running:
-            return
+    tk.Button(
+        frame_t1,
+        text="Setează Alarmă",
+        bg="#4CAF50",
+        fg="white",
+        command=self.start_timer1,
+    ).pack(pady=5)
 
-        date_str = self.entry_date.get().strip()
-        time_str = self.entry_time.get().strip()
+    # TIMER 2: Repetitiv la un interval specificat (secunde)
+    frame_t2 = tk.LabelFrame(
+        self.root,
+        text="Timer 2: Repetitiv (Interval Secunde)",
+        padx=10,
+        pady=5,
+    )
+    frame_t2.pack(fill="x", padx=15, pady=5)
 
-        # Validare și conversie dată/oră
-        try:
-            full_datetime_str = f"{date_str} {time_str}"
-            try:
-                self.target_datetime = datetime.datetime.strptime(full_datetime_str, "%Y-%m-%d %H:%M:%S")
-            except ValueError:
-                self.target_datetime = datetime.datetime.strptime(full_datetime_str, "%Y-%m-%d %H:%M")
-        except ValueError:
-            messagebox.showerror(
-                "Eroare de format",
-                "Format incorect!\nFolosiți:\nData: YYYY-MM-DD\nOra: HH:MM:SS"
-            )
-            return
+    tk.Label(frame_t2, text="Interval (secunde):").pack()
+    self.entry_interval2 = tk.Entry(frame_t2)
+    self.entry_interval2.pack()
 
-        now = datetime.datetime.now()
-        if self.target_datetime <= now:
-            messagebox.showwarning(
-                "Atenție", "Data și ora specificate trebuie să fie în viitor!"
-            )
-            return
+    frame_btn2 = tk.Frame(frame_t2)
+    frame_btn2.pack(pady=5)
 
-        self.running = True
-        self.btn_start.config(state=tk.DISABLED)
-        self.update_timer()
+    self.btn_start2 = tk.Button(
+        frame_btn2,
+        text="Start",
+        bg="#2196F3",
+        fg="white",
+        command=self.start_timer2,
+    )
+    self.btn_start2.pack(side="left", padx=5)
 
-    def update_timer(self):
-        if not self.running:
-            return
+    self.btn_stop2 = tk.Button(
+        frame_btn2, text="Stop", bg="#F44336", fg="white", command=self.stop_timer2
+    )
+    self.btn_stop2.pack(side="left", padx=5)
 
-        now = datetime.datetime.now()
-        diff = self.target_datetime - now
+    # TIMER 3: Alarmă cu întârziere fixă (secunde)
+    frame_t3 = tk.LabelFrame(
+        self.root, text="Timer 3: Alarmă cu Întârziere", padx=10, pady=5
+    )
+    frame_t3.pack(fill="x", padx=15, pady=5)
 
-        if diff.total_seconds() <= 0:
-            self.label_timer.config(text="00:00:00", fg="#D32F2F")
-            self.running = False
-            self.btn_start.config(state=tk.NORMAL)
-            messagebox.showinfo("Timpul a expirat!", "Numărătoarea inversă s-a încheiat!")
-            return
+    tk.Label(frame_t3, text="Declanșează peste (secunde):").pack()
+    self.entry_delay3 = tk.Entry(frame_t3)
+    self.entry_delay3.pack()
 
-        total_seconds = int(diff.total_seconds())
-        days = total_seconds // 86400
-        hours = (total_seconds % 86400) // 3600
-        minutes = (total_seconds % 3600) // 60
-        seconds = total_seconds % 60
+    tk.Button(
+        frame_t3,
+        text="Pornește Timer 3",
+        bg="#FF9800",
+        fg="white",
+        command=self.trigger_timer3,
+    ).pack(pady=5)
 
-        if days > 0:
-            time_format = f"{days}z {hours:02d}:{minutes:02d}:{seconds:02d}"
-        else:
-            time_format = f"{hours:02d}:{minutes:02d}:{seconds:02d}"
+  # --- LOGICĂ TIMER 1 ---
+  def start_timer1(self):
+    target_str = self.entry_time1.get().strip()
+    try:
+      now = datetime.datetime.now()
+      target_time = datetime.datetime.strptime(target_str, "%H:%M:%S").time()
+      target_dt = datetime.datetime.combine(now.date(), target_time)
 
-        self.label_timer.config(text=time_format)
+      if target_dt < now:
+        target_dt += datetime.timedelta(days=1)
 
-        self.root.after(1000, self.update_timer)
+      delay_ms = int((target_dt - now).total_seconds() * 1000)
+      self.root.after(delay_ms, self.alarm_timer1)
+      messagebox.showinfo(
+          "Timer 1", f"Alarmă setată pentru ora {target_str}!"
+      )
+    except ValueError:
+      messagebox.showerror(
+          "Eroare", "Format oră invalid! Folosește HH:MM:SS (ex: 15:30:00)."
+      )
+
+  def alarm_timer1(self):
+    messagebox.showinfo("Timer 1 Alarmă", "Ora programată a sosit!")
+
+  # --- LOGICĂ TIMER 2 ---
+  def start_timer2(self):
+    if self.timer2_running:
+      return
+    try:
+      interval = float(self.entry_interval2.get()) * 1000
+      if interval <= 0:
+        raise ValueError
+      self.timer2_running = True
+      self.run_timer2(interval)
+    except ValueError:
+      messagebox.showerror("Eroare", "Introdu o valoare validă în secunde.")
+
+  def run_timer2(self, interval):
+    if self.timer2_running:
+      print("Timer 2: Ciclu repetitiv declanșat.")
+      self.timer2_job = self.root.after(
+          int(interval), lambda: self.run_timer2(interval)
+      )
+
+  def stop_timer2(self):
+    if self.timer2_running:
+      self.timer2_running = False
+      if self.timer2_job:
+        self.root.after_cancel(self.timer2_job)
+      messagebox.showinfo("Timer 2", "Timerul repetitiv a fost oprit.")
+
+  # --- LOGICĂ TIMER 3 ---
+  def trigger_timer3(self):
+    try:
+      delay_sec = float(self.entry_delay3.get())
+      if delay_sec <= 0:
+        raise ValueError
+      delay_ms = int(delay_sec * 1000)
+      self.timer3_job = self.root.after(delay_ms, self.alarm_timer3)
+      messagebox.showinfo(
+          "Timer 3", f"Timer pornit! Va suna peste {delay_sec} secunde."
+      )
+    except ValueError:
+      messagebox.showerror(
+          "Eroare", "Introdu un număr valid de secunde pentru Timer 3."
+      )
+
+  def alarm_timer3(self):
+    messagebox.showinfo("Timer 3", "Timpul pentru Timer 3 a expirat!")
